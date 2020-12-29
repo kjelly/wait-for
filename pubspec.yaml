@@ -1,0 +1,5 @@
+name: wait_for
+dependencies:
+    args:
+environment:
+  sdk: '>=2.10.0 <3.0.0'
