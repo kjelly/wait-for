@@ -26,6 +26,8 @@ void main(List<String> args) async {
   parser.addOption('timeout', abbr: 't', help: '', defaultsTo: "0");
   parser.addOption('interval', abbr: 'i', help: '', defaultsTo: "5");
   parser.addFlag('not', abbr: "n", defaultsTo: false);
+  parser.addFlag('match-all-ok-pattern', defaultsTo: false);
+  parser.addFlag('match-all-fail-pattern', defaultsTo: false);
 
   parser.addFlag('help', abbr: "h");
   var results = parser.parse(args);
@@ -45,6 +47,8 @@ void main(List<String> args) async {
   final timeout = int.tryParse(results['timeout']) ?? 0;
   final dir = Directory.systemTemp.createTempSync();
   final tempFile = File("${dir.path}/wait-for");
+  final matchAllOkPattern = results['match-all-ok-pattern'];
+  final matchAllFailPattern = results['match-all-fail-pattern'];
   tempFile.createSync();
 
   var ok = false;
@@ -72,6 +76,9 @@ void main(List<String> args) async {
       if (stdout.contains(i)) {
         ok |= true;
         loop = false;
+      }else if(matchAllOkPattern){
+        ok = false;
+        loop = true;
         break;
       }
     }
@@ -79,18 +86,27 @@ void main(List<String> args) async {
       if (stdout.contains(i)) {
         loop = false;
         ok |= false;
+      }else if(matchAllFailPattern){
+        loop = true;
+        break;
       }
     }
     for (var i in okNoString) {
       if (!stdout.contains(i)) {
         loop = false;
         ok |= true;
+      }else if(matchAllOkPattern){
+        ok = false;
+        break;
       }
     }
     for (var i in failNoString) {
       if (!stdout.contains(i)) {
         loop = false;
         ok |= false;
+      }else if(matchAllFailPattern){
+        loop = true;
+        break;
       }
     }
     tempFile.writeAsStringSync(stdout);
@@ -98,12 +114,18 @@ void main(List<String> args) async {
       if (runScript(i, tempFile.absolute.path) == 0) {
         loop = false;
         ok |= true;
+      }else if(matchAllOkPattern){
+        ok = false;
+        break;
       }
     }
     for (var i in failScriptString) {
       if (runScript(i, tempFile.absolute.path) == 0) {
         loop = false;
         ok |= false;
+      }else if(matchAllFailPattern){
+        loop = true;
+        break;
       }
     }
     if (loop) {
